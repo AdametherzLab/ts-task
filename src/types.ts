@@ -46,6 +46,8 @@ export interface TaskContext {
   readonly taskName: string;
   /** Scoped logger for this task instance */
   readonly logger: TaskLogger;
+  /** Arguments passed to this task from the CLI */
+  readonly args: readonly string[];
 }
 
 /**
@@ -103,4 +105,6 @@ export interface RunOptions {
   readonly logLevel?: LogLevel;
   /** Working directory for resolving tasks.ts (defaults to process.cwd()) */
   readonly cwd?: string;
+  /** Arguments to pass to specific tasks */
+  readonly taskArgs?: { [taskName: string]: readonly string[] };
 }

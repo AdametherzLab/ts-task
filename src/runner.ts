@@ -85,9 +85,9 @@ export function resolveDeps(taskModule: TaskModule, taskNames: readonly string[]
   return result;
 }
 
-async function executeTask(taskName: string, taskFn: TaskFn, logLevel: LogLevel): Promise<TaskResult> {
+async function executeTask(taskName: string, taskFn: TaskFn, logLevel: LogLevel, args: readonly string[]): Promise<TaskResult> {
   const startTime = new Date();
-  const ctx: TaskContext = { taskName, logger: createLogger(taskName, logLevel) };
+  const ctx: TaskContext = { taskName, logger: createLogger(taskName, logLevel), args };
   try {
     await taskFn(ctx);
     const endTime = new Date();
@@ -110,14 +110,16 @@ async function executeTask(taskName: string, taskFn: TaskFn, logLevel: LogLevel)
  * @param taskModule - Loaded task module
  * @param taskNames - Tasks to execute concurrently (must have no interdependencies)
  * @param logLevel - Minimum log level for output
+ * @param taskArgs - Optional arguments to pass to tasks
  * @returns Array of task results
  * @throws {Error} If a specified task is not a function
  */
-export async function runParallel(taskModule: TaskModule, taskNames: readonly string[], logLevel: LogLevel = 1): Promise<TaskResult[]> {
+export async function runParallel(taskModule: TaskModule, taskNames: readonly string[], logLevel: LogLevel = 1, taskArgs: { [taskName: string]: readonly string[] } = {}): Promise<TaskResult[]> {
   return Promise.all(taskNames.map(async (name) => {
     const fn = taskModule[name] as TaskFn | undefined;
     if (typeof fn !== "function") throw new Error(`Task is not a function: ${name}`);
-    return executeTask(name, fn, logLevel);
+    const args = taskArgs[name] || [];
+    return executeTask(name, fn, logLevel, args);
   }));
 }
 
@@ -134,7 +136,7 @@ export async function runParallel(taskModule: TaskModule, taskNames: readonly st
  * });
  */
 export async function runTasks(options: RunOptions): Promise<TaskResult[]> {
-  const { taskNames, parallel, logLevel = 1, cwd = process.cwd() } = options;
+  const { taskNames, parallel, logLevel = 1, cwd = process.cwd(), taskArgs = {} } = options;
   if (taskNames.length === 0) return [];
   
   const mod = await loadTasks(cwd);
@@ -145,7 +147,8 @@ export async function runTasks(options: RunOptions): Promise<TaskResult[]> {
     for (const name of order) {
       const fn = mod[name] as TaskFn;
       if (typeof fn !== "function") throw new Error(`Task is not a function: ${name}`);
-      const res = await executeTask(name, fn, logLevel);
+      const args = taskArgs[name] || [];
+      const res = await executeTask(name, fn, logLevel, args);
       results.push(res);
       if (!res.success) break;
     }
@@ -174,7 +177,7 @@ export async function runTasks(options: RunOptions): Promise<TaskResult[]> {
   
   const results: TaskResult[] = [];
   for (const lvl of Array.from(groups.keys()).sort((a, b) => a - b)) {
-    const batch = await runParallel(mod, groups.get(l)!, logLevel);
+    const batch = await runParallel(mod, groups.get(l)!, logLevel, taskArgs);
     results.push(...batch);
     if (batch.some(r => !r.success)) break;
   }

@@ -1,6 +1,6 @@
 {
   "name": "@adametherzlab/ts-task",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal TypeScript-native task runner — define async tasks in a `tasks.ts` file and run them by name with clean logs",
   "type": "module",
   "main": "./dist/index.js",

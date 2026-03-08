@@ -100,4 +100,18 @@ describe("ts-task", () => {
       fs.rmdirSync(tempDir);
     }
   });
+
+  it("task function receives arguments", async () => {
+    const taskWithArgs: TaskFn = async (ctx) => {
+      expect(ctx.args).toEqual(["arg1", "arg2"]);
+      ctx.logger.info(`Received args: ${ctx.args.join(', ')}`);
+    };
+
+    const module: TaskModule = {
+      taskWithArgs,
+    };
+
+    const results = await runParallel(module, ["taskWithArgs"], LogLevel.Silent, { taskWithArgs: ["arg1", "arg2"] });
+    expect(results[0].success).toBe(true);
+  });
 });
