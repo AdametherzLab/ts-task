@@ -10,6 +10,7 @@ import {
   LogLevel,
   type TaskModule,
   type TaskFn,
+  runTasks,
 } from "../src/index.ts";
 
 describe("ts-task", () => {
@@ -113,5 +114,57 @@ describe("ts-task", () => {
 
     const results = await runParallel(module, ["taskWithArgs"], LogLevel.Silent, { taskWithArgs: ["arg1", "arg2"] });
     expect(results[0].success).toBe(true);
+  });
+
+  it("runTasks executes default tasks if no task name is provided and 'default' is defined", async () => {
+    const defaultTask: TaskFn = async (ctx) => {
+      ctx.logger.info("Running default task");
+    };
+    const module: TaskModule = {
+      default: defaultTask,
+    };
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ts-task-default-test-"));
+    const tasksFilePath = path.join(tempDir, "tasks.ts");
+    fs.writeFileSync(tasksFilePath, `export const default = async (ctx) => { ctx.logger.info("Running default task"); };`);
+
+    try {
+      const results = await runTasks({
+        taskNames: [], // No task names provided
+        parallel: false,
+        logLevel: LogLevel.Silent,
+        cwd: tempDir,
+      });
+      expect(results).toHaveLength(1);
+      expect(results[0].taskName).toBe("default");
+      expect(results[0].success).toBe(true);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("runTasks does nothing if no task name is provided and 'default' is not defined", async () => {
+    const someTask: TaskFn = async (ctx) => {
+      ctx.logger.info("Running some task");
+    };
+    const module: TaskModule = {
+      someTask,
+    };
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ts-task-no-default-test-"));
+    const tasksFilePath = path.join(tempDir, "tasks.ts");
+    fs.writeFileSync(tasksFilePath, `export const someTask = async (ctx) => { ctx.logger.info("Running some task"); };`);
+
+    try {
+      const results = await runTasks({
+        taskNames: [], // No task names provided
+        parallel: false,
+        logLevel: LogLevel.Silent,
+        cwd: tempDir,
+      });
+      expect(results).toHaveLength(0);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

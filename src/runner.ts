@@ -136,10 +136,18 @@ export async function runParallel(taskModule: TaskModule, taskNames: readonly st
  * });
  */
 export async function runTasks(options: RunOptions): Promise<TaskResult[]> {
-  const { taskNames, parallel, logLevel = 1, cwd = process.cwd(), taskArgs = {} } = options;
-  if (taskNames.length === 0) return [];
-  
+  let { taskNames, parallel, logLevel = 1, cwd = process.cwd(), taskArgs = {} } = options;
+
   const mod = await loadTasks(cwd);
+
+  if (taskNames.length === 0) {
+    if (typeof mod.default === 'function') {
+      taskNames = ['default'];
+    } else {
+      return []; // No tasks specified and no default task
+    }
+  }
+  
   const order = resolveDeps(mod, taskNames);
   
   if (!parallel) {

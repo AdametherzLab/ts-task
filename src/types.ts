@@ -73,6 +73,8 @@ export interface TaskModule {
   readonly deps?: TaskDeps;
   /** Task functions keyed by name */
   readonly [taskName: string]: TaskFn | TaskDeps | undefined;
+  /** Optional default task to run when no task name is provided */
+  readonly default?: TaskFn;
 }
 
 /**
